@@ -1,4 +1,5 @@
 ﻿using Crawler.Api.Core.DTOs;
+using Crawler.Api.Core.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Crawler.Api.Controllers
@@ -7,21 +8,36 @@ namespace Crawler.Api.Controllers
     [Route("api/[controller]")]
     public class CrawlingController : ControllerBase
     {
-        // O atributo [HttpPost] define que este método responde a requisições POST.
-        // O nome "instagram" será parte da URL: /api/crawling/instagram
+        private readonly ICrawlerService _crawlerService;
+
+        // Injetamos a interface do nosso serviço no construtor
+        public CrawlingController(ICrawlerService crawlerService)
+        {
+            _crawlerService = crawlerService;
+        }
+
         [HttpPost("instagram")]
-        public IActionResult StartInstagramCrawl([FromBody] CrawlRequest request)
+        public async Task<IActionResult> StartInstagramCrawl([FromBody] CrawlRequest request)
         {
             if (string.IsNullOrWhiteSpace(request.TargetUsername))
             {
                 return BadRequest("O nome de usuário (TargetUsername) é obrigatório.");
             }
 
-            // Por enquanto, apenas confirmamos o recebimento.
-            // Nos próximos passos, vamos chamar o worker Python aqui.
-            var responseMessage = $"Requisição de crawling para o perfil '{request.TargetUsername}' recebida. Itens a buscar: {request.MaxItems ?? 10}.";
+            try
+            {
+                // Chamamos o nosso serviço para executar o script Python
+                string resultJson = await _crawlerService.RunCrawlAsync(request.TargetUsername, request.MaxItems);
 
-            return Ok(new { Message = responseMessage });
+                // Por enquanto, apenas retornamos o JSON bruto como resposta
+                // No futuro, vamos desserializar e salvar no banco aqui
+                return Content(resultJson, "application/json");
+            }
+            catch (Exception ex)
+            {
+                // Se o serviço der um erro (ex: script não encontrado, erro no python), retornamos um erro 500
+                return StatusCode(500, new { Message = "Ocorreu um erro interno no servidor.", Error = ex.Message });
+            }
         }
     }
 }
