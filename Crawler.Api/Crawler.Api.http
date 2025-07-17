@@ -1,0 +1,6 @@
+@Crawler.Api_HostAddress = http://localhost:5051
+
+GET {{Crawler.Api_HostAddress}}/crawler/
+Accept: application/json
+
+###
