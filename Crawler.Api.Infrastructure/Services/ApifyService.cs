@@ -1,6 +1,7 @@
 ﻿using Crawler.Api.Core.Interfaces;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using System.Net.Http.Headers;
 using System.Net.Http.Json;
 using System.Text.Json;
 
@@ -32,8 +33,12 @@ namespace Crawler.Api.Infrastructure.Services
         {
             var client = _httpClientFactory.CreateClient();
 
-            // 1. Iniciar a execução do Ator
-            var startUrl = $"{_apifyBaseUrl}/acts/{_actorId}/runs?token={_apifyToken}";
+            client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", _apifyToken);
+
+            // 1. Iniciar a execução do Ator, agora sem o token na URL
+            var startUrl = $"{_apifyBaseUrl}/acts/{_actorId}/runs";
+
+
             var runInput = new
             {
                 directUrls = new[] { $"https://www.instagram.com/{targetUsername}/" },
@@ -52,7 +57,7 @@ namespace Crawler.Api.Infrastructure.Services
             _logger.LogInformation("Ator iniciado com sucesso. RunId: {runId}", runId);
 
             // 2. Esperar pelo resultado (Polling)
-            var statusUrl = $"{_apifyBaseUrl}/actor-runs/{runId}?token={_apifyToken}";
+            var statusUrl = $"{_apifyBaseUrl}/actor-runs/{runId}";
             string status = "";
             JsonElement resultData = new();
 
@@ -74,7 +79,7 @@ namespace Crawler.Api.Infrastructure.Services
             var datasetId = resultData.GetProperty("defaultDatasetId").GetString();
             _logger.LogInformation("Crawling concluído. Buscando resultados do DatasetId: {datasetId}", datasetId);
 
-            var itemsUrl = $"{_apifyBaseUrl}/datasets/{datasetId}/items?token={_apifyToken}&format=json";
+            var itemsUrl = $"{_apifyBaseUrl}/datasets/{datasetId}/items?format=json";
             var resultJson = await client.GetStringAsync(itemsUrl);
 
             return resultJson;
