@@ -2,6 +2,6 @@
 {
     public interface ICrawlerService
     {
-        Task<string> RunCrawlAsync(string targetUsername, int? maxItems);
+        Task<string> CrawlAndGetResultAsync(string targetUsername, int? maxItems);
     }
 }

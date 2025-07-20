@@ -8,7 +8,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<ICrawlerService, PythonCrawlerService>();
+builder.Services.AddScoped<ICrawlerService, ApifyService>();
 
 var app = builder.Build();
 
