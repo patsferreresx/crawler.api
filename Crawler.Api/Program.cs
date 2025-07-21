@@ -1,14 +1,19 @@
 using Crawler.Api.Core.Interfaces;
+using Crawler.Api.Infrastructure.Persistence.Repositories;
 using Crawler.Api.Infrastructure.Services;
+using Crawler.Application.Interfaces;
+using Crawler.Application.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddControllers();
-
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddHttpClient();
 
 builder.Services.AddScoped<ICrawlerService, ApifyService>();
+builder.Services.AddScoped<IInstagramPostRepository, MongoDbPostRepository>();
+builder.Services.AddScoped<ICrawlingApplicationService, CrawlingApplicationService>();
 
 var app = builder.Build();
 
