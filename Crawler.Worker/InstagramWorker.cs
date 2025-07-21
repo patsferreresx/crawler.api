@@ -1,6 +1,9 @@
+using Crawler.Api.Core.Entities;
 using Crawler.Api.Core.Interfaces;
+using Crawler.Api.Infrastructure.DTOs;
 using Crawler.Worker.Models;
 using Cronos;
+using System.Text.Json;
 
 namespace Crawler.Worker;
 
@@ -57,6 +60,8 @@ public class InstagramWorker : BackgroundService
             {
                 var crawlerService = scope.ServiceProvider.GetRequiredService<ICrawlerService>();
 
+                var postRepository = scope.ServiceProvider.GetRequiredService<IInstagramPostRepository>();
+
                 var targets = _configuration.GetSection("InstagramJob:Targets").Get<List<InstagramTarget>>();
                 if (targets is null || !targets.Any())
                 {
@@ -68,11 +73,50 @@ public class InstagramWorker : BackgroundService
                 {
                     try
                     {
-                        _logger.LogInformation("Processando alvo: {Username}", target.Username);
+                        // 1. Buscamos o JSON bruto
                         string resultJson = await crawlerService.CrawlAndGetResultAsync(target.Username, target.MaxItems);
 
-                        // TODO: Salvar o 'resultJson' no banco de dados.
-                        _logger.LogInformation("Crawling do alvo {Username} concluído com sucesso.", target.Username);
+                        // 2. Desserializamos o JSON "sujo" para uma lista de DTOs
+                        var apifyPosts = JsonSerializer.Deserialize<List<ApifyInstagramPostDto>>(resultJson);
+
+                        if (apifyPosts is null || !apifyPosts.Any())
+                        {
+                            _logger.LogInformation("Nenhum post retornado pela Apify para o alvo {Username}", target.Username);
+                            continue;
+                        }
+
+                        var newPostsToSave = new List<InstagramPost>();
+                        foreach (var apifyPost in apifyPosts)
+                        {
+                            // 3. Verificamos se o post já existe no nosso banco para não duplicar
+                            var existingPost = await postRepository.GetByPostIdAsync(apifyPost.Id);
+                            if (existingPost is null)
+                            {
+                                // 4. Mapeamos do DTO "sujo" para nossa entidade "limpa"
+                                var cleanPost = new InstagramPost
+                                {
+                                    PostIdFromInstagram = apifyPost.Id,
+                                    OwnerUsername = apifyPost.OwnerUsername,
+                                    Url = apifyPost.Url,
+                                    Caption = apifyPost.Caption,
+                                    LikesCount = apifyPost.LikesCount,
+                                    DisplayUrl = apifyPost.DisplayUrl,
+                                    Timestamp = apifyPost.Timestamp
+                                };
+                                newPostsToSave.Add(cleanPost);
+                            }
+                        }
+
+                        // 5. Se tivermos novos posts, salvamos todos de uma vez
+                        if (newPostsToSave.Any())
+                        {
+                            await postRepository.AddManyAsync(newPostsToSave);
+                            _logger.LogInformation("{count} novos posts do alvo {Username} salvos no banco de dados.", newPostsToSave.Count, target.Username);
+                        }
+                        else
+                        {
+                            _logger.LogInformation("Nenhum post novo encontrado para o alvo {Username}.", target.Username);
+                        }
                     }
                     catch (Exception ex)
                     {
