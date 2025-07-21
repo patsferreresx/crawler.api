@@ -29,5 +29,13 @@ namespace Crawler.Api.Infrastructure.Persistence.Repositories
         {
             return await _postsCollection.Find(p => p.PostIdFromInstagram == postId).FirstOrDefaultAsync();
         }
+
+        public async Task<List<InstagramPost>> GetPostsByUsernameAsync(string username)
+        {
+            // Busca todos os posts do usuário e ordena pelos mais recentes
+            return await _postsCollection.Find(p => p.OwnerUsername == username)
+                                         .SortByDescending(p => p.Timestamp)
+                                         .ToListAsync();
+        }
     }
 }

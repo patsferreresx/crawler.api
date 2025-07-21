@@ -22,12 +22,12 @@ namespace Crawler.Api.Controllers
         }
 
         // Endpoint para o USUÁRIO disparar um crawl
-        [HttpPost("trigger")]
-        public async Task<IActionResult> StartInstagramCrawl([FromBody] CrawlRequest request)
-        {
-            var runId = await _crawlerService.StartCrawlWithWebhookAsync(request.TargetUsername, request.MaxItems);
-            return Accepted(new { Message = "Requisição de crawling aceita.", RunId = runId });
-        }
+        //[HttpPost("trigger")]
+        //public async Task<IActionResult> StartInstagramCrawl([FromBody] CrawlRequest request)
+        //{
+        //    var runId = await _crawlerService.StartCrawlWithWebhookAsync(request.TargetUsername, request.MaxItems);
+        //    return Accepted(new { Message = "Requisição de crawling aceita.", RunId = runId });
+        //}
 
         // Endpoint para o APIFY nos avisar que terminou
         [HttpPost("webhook-receiver")]

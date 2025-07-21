@@ -9,5 +9,6 @@ namespace Crawler.Api.Core.Interfaces
 
         // Um método para salvar uma lista de novos posts.
         Task AddManyAsync(IEnumerable<InstagramPost> posts);
+        Task<List<InstagramPost>> GetPostsByUsernameAsync(string username);
     }
 }
