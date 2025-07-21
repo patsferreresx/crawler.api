@@ -2,6 +2,9 @@
 {
     public interface ICrawlerService
     {
-        Task<string> RunCrawlAsync(string targetUsername, int? maxItems);
+        Task<string> CrawlAndGetResultAsync(string targetUsername, int? maxItems);
+
+        Task<string> StartCrawlWithWebhookAsync(string targetUsername, int? maxItems);
+        Task<string> GetCrawlResultAsync(string datasetId);
     }
 }

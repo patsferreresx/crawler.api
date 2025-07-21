@@ -3,27 +3,18 @@ using Crawler.Api.Infrastructure.Persistence.Repositories;
 using Crawler.Api.Infrastructure.Services;
 using Crawler.Application.Interfaces;
 using Crawler.Application.Services;
+using Crawler.Worker;
 
-var builder = WebApplication.CreateBuilder(args);
+var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.AddControllers();
-builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddHttpClient();
-
-builder.Services.AddScoped<ICrawlerService, ApifyService>();
+// Registra os serviços necessários
+builder.Services.AddHttpClient(); // Para o ApifyService funcionar
+builder.Services.AddScoped<ICrawlerService, ApifyService>(); // Nosso serviço compartilhado
 builder.Services.AddScoped<IInstagramPostRepository, MongoDbPostRepository>();
 builder.Services.AddScoped<ICrawlingApplicationService, CrawlingApplicationService>();
+builder.Services.AddHostedService<InstagramWorker>(); // Registra nosso worker para rodar em background
 builder.Services.AddScoped<ITargetRepository, MongoDbTargetRepository>();
 
-var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
-
-app.UseHttpsRedirection();
-app.MapControllers();
-app.Run();
+var host = builder.Build();
+host.Run();

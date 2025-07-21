@@ -1,5 +1,6 @@
 ﻿using Crawler.Api.Core.DTOs;
 using Crawler.Api.Core.Interfaces;
+using Crawler.Application.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
 namespace Crawler.Api.Controllers
@@ -9,35 +10,39 @@ namespace Crawler.Api.Controllers
     public class CrawlingController : ControllerBase
     {
         private readonly ICrawlerService _crawlerService;
+        private readonly ICrawlingApplicationService _appService;
+        private readonly ILogger<CrawlingController> _logger;
 
         // Injetamos a interface do nosso serviço no construtor
-        public CrawlingController(ICrawlerService crawlerService)
+        public CrawlingController(ICrawlerService crawlerService, ICrawlingApplicationService appService, ILogger<CrawlingController> logger)
         {
             _crawlerService = crawlerService;
+            _appService = appService;
+            _logger = logger;
         }
 
-        [HttpPost("instagram")]
-        public async Task<IActionResult> StartInstagramCrawl([FromBody] CrawlRequest request)
+        // Endpoint para o USUÁRIO disparar um crawl
+        //[HttpPost("trigger")]
+        //public async Task<IActionResult> StartInstagramCrawl([FromBody] CrawlRequest request)
+        //{
+        //    var runId = await _crawlerService.StartCrawlWithWebhookAsync(request.TargetUsername, request.MaxItems);
+        //    return Accepted(new { Message = "Requisição de crawling aceita.", RunId = runId });
+        //}
+
+        // Endpoint para o APIFY nos avisar que terminou
+        [HttpPost("webhook-receiver")]
+        public async Task<IActionResult> ApifyWebhookReceiver([FromBody] ApifyWebhookPayload payload)
         {
-            if (string.IsNullOrWhiteSpace(request.TargetUsername))
+            _logger.LogInformation("Webhook recebido da Apify! Status: {Status}", payload.Resource.Status);
+
+            if (payload.EventType == "ACTOR.RUN.SUCCEEDED")
             {
-                return BadRequest("O nome de usuário (TargetUsername) é obrigatório.");
+                var resultJson = await _crawlerService.GetCrawlResultAsync(payload.Resource.DefaultDatasetId);
+                // Usamos nosso serviço de aplicação compartilhado para processar e salvar!
+                await _appService.ProcessAndSaveCrawlResultAsync(resultJson);
             }
 
-            try
-            {
-                // Chamamos o nosso serviço para executar o script Python
-                string resultJson = await _crawlerService.RunCrawlAsync(request.TargetUsername, request.MaxItems);
-
-                // Por enquanto, apenas retornamos o JSON bruto como resposta
-                // No futuro, vamos desserializar e salvar no banco aqui
-                return Content(resultJson, "application/json");
-            }
-            catch (Exception ex)
-            {
-                // Se o serviço der um erro (ex: script não encontrado, erro no python), retornamos um erro 500
-                return StatusCode(500, new { Message = "Ocorreu um erro interno no servidor.", Error = ex.Message });
-            }
+            return Ok();
         }
     }
 }
