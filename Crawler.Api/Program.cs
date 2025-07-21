@@ -14,6 +14,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddScoped<ICrawlerService, ApifyService>();
 builder.Services.AddScoped<IInstagramPostRepository, MongoDbPostRepository>();
 builder.Services.AddScoped<ICrawlingApplicationService, CrawlingApplicationService>();
+builder.Services.AddScoped<ITargetRepository, MongoDbTargetRepository>();
 
 var app = builder.Build();
 

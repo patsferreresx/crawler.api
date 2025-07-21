@@ -43,40 +43,50 @@ public class InstagramWorker : BackgroundService
                 await Task.Delay(delay, stoppingToken);
             }
 
-            _logger.LogInformation("Iniciando ciclo do InstagramWorker: {time}", DateTimeOffset.Now);
+            _logger.LogWarning("================ INICIANDO NOVO CICLO DO WORKER ================ ({time})", DateTimeOffset.Now);
 
             using (var scope = _scopeFactory.CreateScope())
             {
-                var crawlerService = scope.ServiceProvider.GetRequiredService<ICrawlerService>();
-                // Pegamos nosso serviço de aplicação que contém a lógica de negócio
+                // Pegamos os serviços que precisamos dentro do escopo
+                var targetRepository = scope.ServiceProvider.GetRequiredService<ITargetRepository>();
                 var appService = scope.ServiceProvider.GetRequiredService<ICrawlingApplicationService>();
 
-                var targets = _configuration.GetSection("InstagramJob:Targets").Get<List<InstagramTarget>>();
+                //var targets = _configuration.GetSection("InstagramJob:Targets").Get<List<InstagramTarget>>();
+                var targets = await targetRepository.GetActiveTargetsBySocialNetworkAsync("Instagram");
+
                 if (targets is null || !targets.Any())
                 {
                     _logger.LogWarning("Nenhum alvo configurado para o InstagramJob.");
                     continue;
                 }
 
+                _logger.LogInformation("Encontrados {count} alvos para processar.", targets.Count);
+
                 foreach (var target in targets)
                 {
-                    try
+                    // Usamos um "escopo de log" para que todas as mensagens dentro deste bloco
+                    // tenham a informação do Username anexada.
+                    using (_logger.BeginScope("Processando Alvo: {Username}", target.Username))
                     {
-                        _logger.LogInformation("Buscando dados para o alvo: {Username}", target.Username);
-                        // 1. Buscamos o JSON bruto
-                        string resultJson = await crawlerService.CrawlAndGetResultAsync(target.Username, target.MaxItems);
+                        try
+                        {
+                            _logger.LogInformation("Buscando dados...");
 
-                        // 2. Delegamos a lógica de processar e salvar para o serviço de aplicação
-                        await appService.ProcessAndSaveCrawlResultAsync(resultJson);
+                            var crawlerService = scope.ServiceProvider.GetRequiredService<ICrawlerService>();
+                            string resultJson = await crawlerService.CrawlAndGetResultAsync(target.Username, target.MaxItems);
+                            await appService.ProcessAndSaveCrawlResultAsync(resultJson);
 
-                        _logger.LogInformation("Processamento do alvo {Username} concluído.", target.Username);
-                    }
-                    catch (Exception ex)
-                    {
-                        _logger.LogError(ex, "Falha ao processar o alvo {Username}", target.Username);
+                            _logger.LogInformation("Processamento do alvo concluído com sucesso.");
+                        }
+                        catch (Exception ex)
+                        {
+                            _logger.LogError(ex, "Falha ao processar o alvo.");
+                        }
                     }
                 }
             }
+
+            _logger.LogWarning("================ CICLO DO WORKER FINALIZADO ================");
         }
     }
 }

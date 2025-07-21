@@ -27,7 +27,6 @@ namespace Crawler.Api.Infrastructure.Services
             _apifyBaseUrl = _configuration["ApifySettings:BaseUrl"] ?? "https://api.apify.com/v2";
         }
 
-        // ✅ REUTILIZAÇÃO MÁXIMA
         public async Task<string> CrawlAndGetResultAsync(string targetUsername, int? maxItems)
         {
             var runInput = CreateBaseRunInput(targetUsername, maxItems);

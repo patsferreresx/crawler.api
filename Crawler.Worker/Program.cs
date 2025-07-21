@@ -13,6 +13,7 @@ builder.Services.AddScoped<ICrawlerService, ApifyService>(); // Nosso serviço co
 builder.Services.AddScoped<IInstagramPostRepository, MongoDbPostRepository>();
 builder.Services.AddScoped<ICrawlingApplicationService, CrawlingApplicationService>();
 builder.Services.AddHostedService<InstagramWorker>(); // Registra nosso worker para rodar em background
+builder.Services.AddScoped<ITargetRepository, MongoDbTargetRepository>();
 
 
 var host = builder.Build();
